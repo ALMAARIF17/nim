@@ -1,5 +1,5 @@
 <?php
-$servername = "192.168.0.100";
+$servername = "36.88.175.58";
 $database = "web_lanjut";
 $username = "web";
 $password = "@123WebLanjut";
