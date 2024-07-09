@@ -1,0 +1,129 @@
+<?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+include "koneksidb.php"; // Ensure this file contains your database connection settings
+
+// Initialize variables
+$form_action = "index.php?menu=m_matakuliah";
+$form_title = "TAMBAH DATA";
+$kode_mk = "";
+$nama_mk = "";
+$sks = "";
+$id_dosen = "";
+$smt = "";
+$is_update = false;
+
+// Handling form data for editing
+if (isset($_GET['id'])) {
+    $id = mysqli_real_escape_string($conn, $_GET['id']); // Prevent SQL injection
+    $b = mysqli_query($conn, "SELECT * FROM m_matakuliah WHERE id=$id");
+    if ($b && $c = mysqli_fetch_assoc($b)) {
+        $kode_mk = $c['kode_mk'];
+        $nama_mk = $c['nama_mk'];
+        $sks = $c['sks'];
+        $id_dosen = $c['id_dosen'];
+        $smt = $c['smt'];
+        $is_update = true;
+        $form_action = "index.php?menu=m_matakuliah&id=" . $id;
+        $form_title = "UBAH DATA";
+    }
+}
+
+// Get list of dosen for select options
+$dosen_options = "";
+$dosen_query = mysqli_query($conn, "SELECT id_dosen, nama_dosen FROM m_dosen"); // Update table name if needed
+while ($dosen = mysqli_fetch_assoc($dosen_query)) {
+    $selected = ($dosen['id_dosen'] == $id_dosen) ? "selected" : "";
+    $dosen_options .= "<option value='{$dosen['id_dosen']}' $selected>{$dosen['nama_dosen']}</option>";
+}
+
+// Form for adding or editing data
+echo "<table border='1' width='30%' align='center'>";
+echo "<form method='POST' action='$form_action'>";
+echo "<tr><th colspan='2'>$form_title</th></tr>";
+echo "<tr><td>Kode MK</td><td>: <input type='text' name='kode_mk' value='$kode_mk' required></td></tr>";
+echo "<tr><td>Nama MK</td><td>: <input type='text' name='nama_mk' value='$nama_mk' required></td></tr>";
+echo "<tr><td>SKS</td><td>: <input type='number' name='sks' value='$sks' required></td></tr>";
+echo "<tr><td>Dosen Pengampu</td><td>: <select name='id_dosen' required>$dosen_options</select></td></tr>";
+echo "<tr><td>Semester</td><td>: <input type='text' name='smt' value='$smt' required></td></tr>";
+echo "<tr><th colspan='2'><input type='submit' value='OK' name='" . ($is_update ? "tombol_ubah" : "tombol_tambah") . "'></th></tr>";
+echo "</form>";
+echo "</table>";
+
+// Handling form submission for adding data
+if (isset($_POST['tombol_tambah'])) {
+    $kode_mk = mysqli_real_escape_string($conn, $_POST['kode_mk']);
+    $nama_mk = mysqli_real_escape_string($conn, $_POST['nama_mk']);
+    $sks = mysqli_real_escape_string($conn, $_POST['sks']);
+    $id_dosen = mysqli_real_escape_string($conn, $_POST['id_dosen']);
+    $smt = mysqli_real_escape_string($conn, $_POST['smt']);
+
+    $query = "INSERT INTO m_matakuliah (kode_mk, nama_mk, sks, id_dosen, smt) VALUES ('$kode_mk', '$nama_mk', '$sks', '$id_dosen', '$smt')";
+    $result = mysqli_query($conn, $query);
+
+    if ($result) {
+        echo "<META http-equiv=refresh content='0; URL=index.php?menu=m_matakuliah'>";
+    } else {
+        echo "Error: " . mysqli_error($conn);
+    }
+}
+
+// Handling form submission for updating data
+if (isset($_POST['tombol_ubah'])) {
+    $kode_mk = mysqli_real_escape_string($conn, $_POST['kode_mk']);
+    $nama_mk = mysqli_real_escape_string($conn, $_POST['nama_mk']);
+    $sks = mysqli_real_escape_string($conn, $_POST['sks']);
+    $id_dosen = mysqli_real_escape_string($conn, $_POST['id_dosen']);
+    $smt = mysqli_real_escape_string($conn, $_POST['smt']);
+
+    $id = mysqli_real_escape_string($conn, $_GET['id']);
+    $query = "UPDATE m_matakuliah SET kode_mk='$kode_mk', nama_mk='$nama_mk', sks='$sks', id_dosen='$id_dosen', smt='$smt' WHERE id=$id";
+    $result = mysqli_query($conn, $query);
+
+    if ($result) {
+        echo "<META http-equiv=refresh content='0; URL=index.php?menu=m_matakuliah'>";
+    } else {
+        echo "Error: " . mysqli_error($conn);
+    }
+}
+
+// Handling deletion of data
+if (isset($_GET['delete_id'])) {
+    $delete_id = mysqli_real_escape_string($conn, $_GET['delete_id']);
+    $query = "DELETE FROM m_matakuliah WHERE id='$delete_id'";
+    $result = mysqli_query($conn, $query);
+
+    if ($result) {
+        echo "<META http-equiv=refresh content='0; URL=index.php?menu=m_matakuliah'>";
+    } else {
+        echo "Error: " . mysqli_error($conn);
+    }
+}
+
+// Search functionality
+$keyword = '';
+if (isset($_POST['search'])) {
+    $keyword = mysqli_real_escape_string($conn, $_POST['keyword']);
+    $query = "SELECT * FROM m_matakuliah WHERE kode_mk LIKE '%$keyword%' OR nama_mk LIKE '%$keyword%' ORDER BY id DESC";
+} else {
+    $query = "SELECT * FROM m_matakuliah ORDER BY id DESC";
+}
+
+$a = mysqli_query($conn, $query);
+$no = 0;
+echo "<br>";
+echo "<table border='1' width='80%' align='center'>";
+echo "<form method='POST' action=''>";
+echo "<tr><td colspan=2>Pencarian</td><td colspan=8><input type=text name=keyword value='$keyword'><input type='submit' name='search' value='CARI'> <input type='submit' value='NORMAL'></td></tr>";
+echo "<tr><th> NO </th><th> KODE MK </th><th> NAMA MK </th><th> SKS </th><th> Dosen Pengampu </th><th> Semester </th><th colspan=2>AKSI</th></tr>";
+echo "</form>";
+while ($b = mysqli_fetch_array($a)) {
+    $no++;
+    // Get the name of the dosen_pengampu from the dosen table
+    $dosen_pengampu_name = mysqli_fetch_assoc(mysqli_query($conn, "SELECT nama_dosen FROM m_dosen WHERE id_dosen='{$b['id_dosen']}'"))['nama_dosen'];
+    echo "<tr style='text-align:center;'><td> $no </td> <td> $b[kode_mk] </td> <td> $b[nama_mk] </td> <td>$b[sks]</td> <td>$dosen_pengampu_name</td> <td>$b[smt]</td>";
+    echo "<td><a href='index.php?menu=m_matakuliah&id=$b[id]'><img src='ubah.png' style='width:25px;height:25px;'></a></td>";
+    echo "<td><a href='index.php?menu=m_matakuliah&delete_id=$b[id]'><img src='hapus.png' style='width:25px;height:25px;'></a></td></tr>";
+}
+echo "</table>";
+?>
